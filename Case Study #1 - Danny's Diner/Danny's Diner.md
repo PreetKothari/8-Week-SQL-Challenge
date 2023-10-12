@@ -17,7 +17,7 @@ Danny wants to use the data to answer a few simple questions about his customers
 
 ## Entity Relationship Diagram
 
-![image](https://user-images.githubusercontent.com/81607668/127271130-dca9aedd-4ca9-4ed8-b6ec-1e1920dca4a8.png)
+![Entity Relationship Diagram - Danny's Dinner](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/35e9646d-5f2e-473a-b7fa-8efd4581fd6c)
 
 ***
 
@@ -407,7 +407,7 @@ ORDER BY m.customer_id;
 #### Steps:
 - Create a CTE called `points`. 
 - In the CTE, select the appropriate columns and calculate the points as `purchase_points` by using a `CASE` statement to determine the points based on our assumptions above.
-	- If purchase is made anytime from `join_date` to 7 days from `join_date` (`s.order_date >= mm.join_date AND s.order_date <= DATE_SUB(mm.join_date, INTERVAL -6 DAY)`) then multiply the price of all the items by 10 and then by 2 as the first week member bonus.
+	- If purchase is made anytime from `join_date` to 7 days from `join_date` (`sales.order_date >= members.join_date AND sales.order_date <= DATE_SUB(members.join_date, INTERVAL -6 DAY)`) then multiply the price of all the items by 10 and then by 2 as the first week member bonus.
 	- Else if purchase is made before `join_date` or after 7 days from `join_date` till the last day of January 2021, then
  		- If the `product_id` is 1 (for 'sushi'), multiply the price by 2 and then by 10.
    		- Else for all other products, multiply the price by 10.
