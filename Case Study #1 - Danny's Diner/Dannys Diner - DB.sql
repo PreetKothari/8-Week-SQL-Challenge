@@ -1,6 +1,3 @@
--- CREATE SCHEMA dannys_diner;
--- SET search_path = dannys_diner;
-
 CREATE DATABASE IF NOT EXISTS dannys_diner; 
 USE dannys_diner;
 
