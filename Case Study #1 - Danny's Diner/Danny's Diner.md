@@ -1,7 +1,5 @@
 # 🍜 Case Study #1: Danny's Diner 
-
 <img src="https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/166763a7-6f57-4bde-98a9-d6f1183c326d" alt="Image" width="500" height="520">
-
 
 ## 📚 Table of Contents
 - [Business Task](#business-task)
@@ -25,32 +23,36 @@ Danny wants to use the data to answer a few simple questions about his customers
 
 ## Question and Solution
 
-Please join me in executing the queries using PostgreSQL on [DB Fiddle](https://www.db-fiddle.com/f/2rM8RAnq7h5LLDTzZiRWcd/138). It would be great to work together on the questions!
+I have executed the following queries using MySQL on MySQL Workbench. I have also uploaded a script to `CREATE DATABASE dannys_diner` with the `sales`, `menu`, and `members` tables. 
 
-Additionally, I have also published this case study on [Medium](https://katiehuangx.medium.com/8-week-sql-challenge-case-study-week-1-dannys-diner-2ba026c897ab?source=friends_link&sk=ed355696f5a70ff8b3d5a1b905e5dabe).
+If you have any questions, you can reach out to me on [LinkedIn](www.linkedin.com/in/preet-kothari-a9884b172).
 
-If you have any questions, reach out to me on [LinkedIn](https://www.linkedin.com/in/katiehuangx/).
+**Lets set the current Database as `dannys_diner`**
+````sql
+USE dannys_diner;
+````
 
 **1. What is the total amount each customer spent at the restaurant?**
 
 ````sql
 SELECT 
-  sales.customer_id, 
-  SUM(menu.price) AS total_sales
-FROM dannys_diner.sales
-INNER JOIN dannys_diner.menu
-  ON sales.product_id = menu.product_id
-GROUP BY sales.customer_id
-ORDER BY sales.customer_id ASC; 
+    s.customer_id, 
+    SUM(m.price) AS total_money_spent 
+FROM dannys_diner.sales s
+INNER JOIN dannys_diner.menu m ON s.product_id = m.product_id
+GROUP BY s.customer_id; 
 ````
+
+*Note:- `dannys_dinner.table_name t` = `dannys_dinner.table_name AS t`
+	I will be using this in nearly all my queries involving JOINs.*
 
 #### Steps:
 - Use **JOIN** to merge `dannys_diner.sales` and `dannys_diner.menu` tables as `sales.customer_id` and `menu.price` are from both tables.
-- Use **SUM** to calculate the total sales contributed by each customer.
+- Use **SUM** to calculate the total money spent by each customer.
 - Group the aggregated results by `sales.customer_id`. 
 
 #### Answer:
-| customer_id | total_sales |
+| customer_id | total_money_spent |
 | ----------- | ----------- |
 | A           | 76          |
 | B           | 74          |
@@ -66,22 +68,22 @@ ORDER BY sales.customer_id ASC;
 
 ````sql
 SELECT 
-  customer_id, 
-  COUNT(DISTINCT order_date) AS visit_count
+    customer_id, 
+    COUNT(DISTINCT order_date) AS visit_count
 FROM dannys_diner.sales
 GROUP BY customer_id;
 ````
 
 #### Steps:
 - To determine the unique number of visits for each customer, utilize **COUNT(DISTINCT `order_date`)**.
-- It's important to apply the **DISTINCT** keyword while calculating the visit count to avoid duplicate counting of days. For instance, if Customer A visited the restaurant twice on '2021–01–07', counting without **DISTINCT** would result in 2 days instead of the accurate count of 1 day.
+- It's important to apply the **DISTINCT** keyword while calculating the visit count to avoid duplicate counting of days. For instance, Customer A visited the restaurant twice on '2021–01–01', counting without **DISTINCT** would result in 2 days instead of the accurate count of 1 day.
 
 #### Answer:
 | customer_id | visit_count |
 | ----------- | ----------- |
-| A           | 4          |
-| B           | 6          |
-| C           | 2          |
+| A           | 4           |
+| B           | 6           |
+| C           | 2           |
 
 - Customer A visited 4 times.
 - Customer B visited 6 times.
@@ -93,34 +95,30 @@ GROUP BY customer_id;
 
 ````sql
 WITH ordered_sales AS (
-  SELECT 
-    sales.customer_id, 
-    sales.order_date, 
-    menu.product_name,
-    DENSE_RANK() OVER (
-      PARTITION BY sales.customer_id 
-      ORDER BY sales.order_date) AS rank
-  FROM dannys_diner.sales
-  INNER JOIN dannys_diner.menu
-    ON sales.product_id = menu.product_id
-)
-
-SELECT 
-  customer_id, 
-  product_name
+SELECT
+    m.product_name, 
+    s.customer_id, 
+    s.order_date, 
+    DENSE_RANK() OVER (PARTITION BY s.customer_id 
+		       ORDER BY s.order_date) AS order_rank 
+FROM dannys_diner.menu m
+INNER JOIN dannys_diner.sales s ON m.product_id = s.product_id)
+SELECT
+    customer_id,
+    product_name
 FROM ordered_sales
-WHERE rank = 1
+WHERE order_rank = 1
 GROUP BY customer_id, product_name;
 ````
 
-#### Steps:
-- Create a Common Table Expression (CTE) named `ordered_sales_cte`. Within the CTE, create a new column `rank` and calculate the row number using **DENSE_RANK()** window function. The **PARTITION BY** clause divides the data by `customer_id`, and the **ORDER BY** clause orders the rows within each partition by `order_date`.
-- In the outer query, select the appropriate columns and apply a filter in the **WHERE** clause to retrieve only the rows where the rank column equals 1, which represents the first row within each `customer_id` partition.
+#### Steps: 
+- Create a Common Table Expression (CTE) named `ordered_sales`. Within the CTE, create a new column `order_rank` and calculate the row number using **DENSE_RANK()** window function. The **PARTITION BY** clause divides the data by `customer_id`, and the **ORDER BY** clause orders the rows within each partition by `order_date`.
+- In the outer query, select the appropriate columns and apply a filter in the **WHERE** clause to retrieve only the rows where the `order_rank` column equals 1, which represents the first row within each `customer_id` partition.
 - Use the GROUP BY clause to group the result by `customer_id` and `product_name`.
 
 #### Answer:
 | customer_id | product_name | 
-| ----------- | ----------- |
+| ----------- | -----------  |
 | A           | curry        | 
 | A           | sushi        | 
 | B           | curry        | 
@@ -130,11 +128,9 @@ GROUP BY customer_id, product_name;
 - Customer B's first order is curry.
 - Customer C's first order is ramen.
 
-I have received feedback suggesting the use of `ROW_NUMBER()` instead of `DENSE_RANK()` for determining the "first order" in this question. 
+We have used `DENSE_RANK()` instead of `ROW_NUMBER()` for determining the "first order" in this question. because since the `order_date` does not have a timestamp, it is impossible to determine the exact sequence of items ordered by the customer. 
 
-However, since the `order_date` does not have a timestamp, it is impossible to determine the exact sequence of items ordered by the customer. 
-
-Therefore, it would be inaccurate to conclude that curry is the customer's first order purely based on the alphabetical order of the product names. For this reason, I maintain my solution of using `DENSE_RANK()` and consider both curry and sushi as Customer A's first order.
+Therefore, it would be inaccurate to conclude that curry is the customer's first order purely based on the alphabetical order of the product names. For this reason, we should use `DENSE_RANK()` and consider both curry and sushi as Customer A's first order.
 
 ***
 
@@ -142,24 +138,23 @@ Therefore, it would be inaccurate to conclude that curry is the customer's first
 
 ````sql
 SELECT 
-  menu.product_name,
-  COUNT(sales.product_id) AS most_purchased_item
-FROM dannys_diner.sales
-INNER JOIN dannys_diner.menu
-  ON sales.product_id = menu.product_id
-GROUP BY menu.product_name
-ORDER BY most_purchased_item DESC
+    m.product_name AS most_purchased_item, 
+    COUNT(s.product_id) AS no_of_purchases 
+FROM dannys_diner.menu m
+INNER JOIN dannys_diner.sales s ON m.product_id = s.product_id
+GROUP BY m.product_name
+ORDER BY no_of_purchases DESC
 LIMIT 1;
 ````
 
 #### Steps:
-- Perform a **COUNT** aggregation on the `product_id` column and **ORDER BY** the result in descending order using `most_purchased` field.
+- Perform a **COUNT** aggregation on the `product_id` column and **ORDER BY** the result in descending order using `no_of_purchases` field.
 - Apply the **LIMIT** 1 clause to filter and retrieve the highest number of purchased items.
 
 #### Answer:
-| most_purchased | product_name | 
+| most_purchased_item | no_of_purchases | 
 | ----------- | ----------- |
-| 8       | ramen |
+| ramen      | 8 |
 
 
 - Most purchased item on the menu is ramen which is 8 times. Yummy!
@@ -169,35 +164,31 @@ LIMIT 1;
 **5. Which item was the most popular for each customer?**
 
 ````sql
-WITH most_popular AS (
-  SELECT 
-    sales.customer_id, 
-    menu.product_name, 
-    COUNT(menu.product_id) AS order_count,
-    DENSE_RANK() OVER (
-      PARTITION BY sales.customer_id 
-      ORDER BY COUNT(sales.customer_id) DESC) AS rank
-  FROM dannys_diner.menu
-  INNER JOIN dannys_diner.sales
-    ON menu.product_id = sales.product_id
-  GROUP BY sales.customer_id, menu.product_name
-)
-
+WITH popular_sales AS (
 SELECT 
-  customer_id, 
-  product_name, 
-  order_count
-FROM most_popular 
-WHERE rank = 1;
+    s.customer_id, 
+    m.product_name, 
+    COUNT(s.product_id) AS no_of_purchases,
+    DENSE_RANK() OVER (PARTITION BY s.customer_id
+		       ORDER BY COUNT(s.customer_id) DESC) AS item_popularity 
+FROM dannys_diner.sales s
+INNER JOIN dannys_diner.menu m ON s.product_id = m.product_id
+GROUP BY m.product_name, s.customer_id)
+SELECT 
+    customer_id, 
+    product_name, 
+    no_of_purchases 
+FROM popular_sales
+WHERE item_popularity = 1;
 ````
 
 *Each user may have more than 1 favourite item.*
 
 #### Steps:
-- Create a CTE named `fav_item_cte` and within the CTE, join the `menu` table and `sales` table using the `product_id` column.
-- Group results by `sales.customer_id` and `menu.product_name` and calculate the count of `menu.product_id` occurrences for each group. 
+- Create a CTE named `popular_sales` and within the CTE, join the `menu` table and `sales` table using the `product_id` column.
+- Group results by `sales.customer_id` and `menu.product_name` and calculate the count of `sales.product_id` occurrences for each group. 
 - Utilize the **DENSE_RANK()** window function to calculate the ranking of each `sales.customer_id` partition based on the count of orders **COUNT(`sales.customer_id`)** in descending order.
-- In the outer query, select the appropriate columns and apply a filter in the **WHERE** clause to retrieve only the rows where the rank column equals 1, representing the rows with the highest order count for each customer.
+- In the outer query, select the appropriate columns and apply a filter in the **WHERE** clause to retrieve only the rows where the `item_popularity` column equals 1, representing the rows with the highest order count for each customer.
 
 #### Answer:
 | customer_id | product_name | order_count |
@@ -217,42 +208,37 @@ WHERE rank = 1;
 
 ```sql
 WITH joined_as_member AS (
-  SELECT
-    members.customer_id, 
-    sales.product_id,
-    ROW_NUMBER() OVER (
-      PARTITION BY members.customer_id
-      ORDER BY sales.order_date) AS row_num
-  FROM dannys_diner.members
-  INNER JOIN dannys_diner.sales
-    ON members.customer_id = sales.customer_id
-    AND sales.order_date > members.join_date
-)
-
 SELECT 
-  customer_id, 
-  product_name 
-FROM joined_as_member
-INNER JOIN dannys_diner.menu
-  ON joined_as_member.product_id = menu.product_id
-WHERE row_num = 1
-ORDER BY customer_id ASC;
+    mm.customer_id, s.product_id,
+    mm.join_date, s.order_date,
+    ROW_NUMBER() OVER (PARTITION BY mm.customer_id 
+		       ORDER BY s.order_date) AS row_num
+FROM dannys_diner.members mm
+INNER JOIN dannys_diner.sales s ON s.customer_id = mm.customer_id 
+				AND s.order_date >= mm.join_date)
+SELECT 
+    j.customer_id, 
+    mn.product_name 
+FROM joined_as_member j
+INNER JOIN dannys_diner.menu mn ON j.product_id = mn.product_id 
+				AND j.row_num = 1
+ORDER BY j.customer_id;
 ```
 
 #### Steps:
 - Create a CTE named `joined_as_member` and within the CTE, select the appropriate columns and calculate the row number using the **ROW_NUMBER()** window function. The **PARTITION BY** clause divides the data by `members.customer_id` and the **ORDER BY** clause orders the rows within each `members.customer_id` partition by `sales.order_date`.
-- Join tables `dannys_diner.members` and `dannys_diner.sales` on `customer_id` column. Additionally, apply a condition to only include sales that occurred *after* the member's `join_date` (`sales.order_date > members.join_date`).
+- Join tables `dannys_diner.members` and `dannys_diner.sales` on `customer_id` column. Additionally, apply a condition to only include sales that occurred *from* the member's `join_date` (`sales.order_date >= members.join_date`).
 - In the outer query, join the `joined_as_member` CTE with the `dannys_diner.menu` on the `product_id` column.
-- In the **WHERE** clause, filter to retrieve only the rows where the row_num column equals 1, representing the first row within each `customer_id` partition.
+- In the **WHERE** clause, filter to retrieve only the rows where the `row_num` column equals 1, representing the first row within each `customer_id` partition.
 - Order result by `customer_id` in ascending order.
 
 #### Answer:
 | customer_id | product_name |
 | ----------- | ---------- |
-| A           | ramen        |
+| A           | curry        |
 | B           | sushi        |
 
-- Customer A's first order as a member is ramen.
+- Customer A's first order as a member is curry, on the same day they became a member.
 - Customer B's first order as a member is sushi.
 
 ***
@@ -260,34 +246,29 @@ ORDER BY customer_id ASC;
 **7. Which item was purchased just before the customer became a member?**
 
 ````sql
-WITH purchased_prior_member AS (
-  SELECT 
-    members.customer_id, 
-    sales.product_id,
-    ROW_NUMBER() OVER (
-      PARTITION BY members.customer_id
-      ORDER BY sales.order_date DESC) AS rank
-  FROM dannys_diner.members
-  INNER JOIN dannys_diner.sales
-    ON members.customer_id = sales.customer_id
-    AND sales.order_date < members.join_date
-)
-
+WITH before_joined_as_member AS (
 SELECT 
-  p_member.customer_id, 
-  menu.product_name 
-FROM purchased_prior_member AS p_member
-INNER JOIN dannys_diner.menu
-  ON p_member.product_id = menu.product_id
-WHERE rank = 1
-ORDER BY p_member.customer_id ASC;
+    mm.customer_id, s.product_id,
+    mm.join_date, s.order_date,
+    RANK() OVER (PARTITION BY mm.customer_id
+		 ORDER BY s.order_date DESC) AS row_num
+FROM dannys_diner.members mm
+INNER JOIN dannys_diner.sales s ON s.customer_id = mm.customer_id 
+				AND s.order_date < mm.join_date)
+SELECT
+    bm.customer_id, 
+    mn.product_name 
+FROM before_joined_as_member bm
+INNER JOIN dannys_diner.menu mn ON bm.product_id = mn.product_id
+				AND bm.row_num = 1
+ORDER BY bm.customer_id; 
 ````
 
 #### Steps:
-- Create a CTE called `purchased_prior_member`. 
-- In the CTE, select the appropriate columns and calculate the rank using the **ROW_NUMBER()** window function. The rank is determined based on the order dates of the sales in descending order within each customer's group.
+- Create a CTE called `before_joined_as_member`. 
+- In the CTE, select the appropriate columns and calculate the rank using the **RANK()** window function. The rank is determined based on the order dates of the sales in descending order within each customer's group.
 - Join `dannys_diner.members` table with `dannys_diner.sales` table based on the `customer_id` column, only including sales that occurred *before* the customer joined as a member (`sales.order_date < members.join_date`).
-- Join `purchased_prior_member` CTE with `dannys_diner.menu` table based on `product_id` column.
+- Join `before_joined_as_member` CTE with `dannys_diner.menu` table based on `product_id` column.
 - Filter the result set to include only the rows where the rank is 1, representing the earliest purchase made by each customer before they became a member.
 - Sort the result by `customer_id` in ascending order.
 
@@ -295,9 +276,15 @@ ORDER BY p_member.customer_id ASC;
 | customer_id | product_name |
 | ----------- | ---------- |
 | A           | sushi        |
+| A           | curry        |
 | B           | sushi        |
 
-- Both customers' last order before becoming members are sushi.
+- Customer A placed an order for both curry and sushi simultaneously, before they became a member.
+- Customer B's order brfore joining as a member was curry.
+
+We have used `RANK()` instead of `ROW_NUMBER()` for determining the "first order" in this question. because a customer may have ordered multiple items on a single date and since the `ROW_NUMBER()` ranks each row consecutively without considering duplicates as same rank. 
+
+Therefore, it would be inaccurate to conclude that curry is the customer's only order purely based on the alphabetical order of the product names. For this reason, we should use `RANK()` and consider both curry and sushi as Customer A's order.
 
 ***
 
@@ -305,25 +292,23 @@ ORDER BY p_member.customer_id ASC;
 
 ```sql
 SELECT 
-  sales.customer_id, 
-  COUNT(sales.product_id) AS total_items, 
-  SUM(menu.price) AS total_sales
-FROM dannys_diner.sales
-INNER JOIN dannys_diner.members
-  ON sales.customer_id = members.customer_id
-  AND sales.order_date < members.join_date
-INNER JOIN dannys_diner.menu
-  ON sales.product_id = menu.product_id
-GROUP BY sales.customer_id
-ORDER BY sales.customer_id;
+    mm.customer_id, 
+    COUNT(s.product_id) AS total_items,
+    SUM(mn.price) AS total_sales
+FROM dannys_diner.members mm
+INNER JOIN dannys_diner.sales s ON s.customer_id = mm.customer_id 
+				AND s.order_date < mm.join_date
+INNER JOIN dannys_diner.menu mn ON mn.product_id = s.product_id
+GROUP BY mm.customer_id
+ORDER BY mm.customer_id;
 ```
 
 #### Steps:
-- Select the columns `sales.customer_id` and calculate the count of `sales.product_id` as total_items for each customer and the sum of `menu.price` as total_sales.
-- From `dannys_diner.sales` table, join `dannys_diner.members` table on `customer_id` column, ensuring that `sales.order_date` is earlier than `members.join_date` (`sales.order_date < members.join_date`).
+- Select the columns `members.customer_id` and calculate the count of `sales.product_id` as total_items for each customer and the sum of `menu.price` as total_sales.
+- From `dannys_diner.members` table, join `dannys_diner.sales` table on `customer_id` column, ensuring that `sales.order_date` is earlier than `members.join_date` (`sales.order_date < members.join_date`).
 - Then, join `dannys_diner.menu` table to `dannys_diner.sales` table on `product_id` column.
-- Group the results by `sales.customer_id`.
-- Order the result by `sales.customer_id` in ascending order.
+- Group the results by `members.customer_id`.
+- Order the result by `members.customer_id` in ascending order.
 
 #### Answer:
 | customer_id | total_items | total_sales |
@@ -340,23 +325,25 @@ Before becoming members,
 **9. If each $1 spent equates to 10 points and sushi has a 2x points multiplier — how many points would each customer have?**
 
 ```sql
-WITH points_cte AS (
-  SELECT 
-    menu.product_id, 
-    CASE
-      WHEN product_id = 1 THEN price * 20
-      ELSE price * 10 END AS points
-  FROM dannys_diner.menu
-)
-
-SELECT 
-  sales.customer_id, 
-  SUM(points_cte.points) AS total_points
-FROM dannys_diner.sales
-INNER JOIN points_cte
-  ON sales.product_id = points_cte.product_id
-GROUP BY sales.customer_id
-ORDER BY sales.customer_id;
+WITH spends AS (
+SELECT
+    s.customer_id,
+    m.product_name,
+    s.product_id,
+    COUNT(s.product_id),
+    SUM(m.price) AS total_spent_on_item 
+FROM dannys_diner.sales s
+INNER JOIN dannys_diner.menu m ON s.product_id = m.product_id
+GROUP BY s.customer_id, m.product_name
+ORDER BY s.customer_id)
+SELECT
+    customer_id,
+    SUM(CASE
+	    WHEN product_id = 1 THEN total_spent_on_item*10*2
+	    ELSE total_spent_on_item*10
+	END) AS total_points
+FROM spends
+GROUP BY customer_id;
 ```
 
 #### Steps:
@@ -374,41 +361,42 @@ Let's break down the question to understand the point calculation for each custo
 | B           | 940 |
 | C           | 360 |
 
-- Total points for Customer A is $860.
-- Total points for Customer B is $940.
-- Total points for Customer C is $360.
+- Total points for Customer A is 860.
+- Total points for Customer B is 940.
+- Total points for Customer C is 360.
 
 ***
 
 **10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi — how many points do customer A and B have at the end of January?**
 
 ```sql
-WITH dates_cte AS (
-  SELECT 
-    customer_id, 
-      join_date, 
-      join_date + 6 AS valid_date, 
-      DATE_TRUNC(
-        'month', '2021-01-31'::DATE)
-        + interval '1 month' 
-        - interval '1 day' AS last_date
-  FROM dannys_diner.members
-)
-
-SELECT 
-  sales.customer_id, 
-  SUM(CASE
-    WHEN menu.product_name = 'sushi' THEN 2 * 10 * menu.price
-    WHEN sales.order_date BETWEEN dates.join_date AND dates.valid_date THEN 2 * 10 * menu.price
-    ELSE 10 * menu.price END) AS points
-FROM dannys_diner.sales
-INNER JOIN dates_cte AS dates
-  ON sales.customer_id = dates.customer_id
-  AND dates.join_date <= sales.order_date
-  AND sales.order_date <= dates.last_date
-INNER JOIN dannys_diner.menu
-  ON sales.product_id = menu.product_id
-GROUP BY sales.customer_id;
+WITH points AS (
+SELECT
+    s.customer_id,
+    s.order_date,
+    mn.product_id,
+    mn.product_name,
+    CASE
+      WHEN s.order_date >= mm.join_date 
+		   	AND s.order_date <= DATE_SUB(mm.join_date, INTERVAL -6 DAY) 
+           		THEN mn.price*20
+      ELSE (CASE
+	      WHEN mn.product_id = 1 THEN price*20
+              ELSE mn.price*10 
+    	    END)
+    END AS purcahse_points
+FROM dannys_diner.menu mn
+INNER JOIN dannys_diner.sales s ON s.product_id = mn.product_id 
+		   		AND s.order_date < '2021-02-01'
+INNER JOIN dannys_diner.members mm ON mm.customer_id = s.customer_id
+ORDER BY s.customer_id, s.order_date)
+SELECT
+    m.customer_id,
+    SUM(p.purcahse_points) AS total_points
+FROM dannys_diner.members m
+INNER JOIN points p ON m.customer_id = p.customer_id
+GROUP BY m.customer_id
+ORDER BY m.customer_id;
 ```
 
 #### Assumptions:
@@ -417,23 +405,28 @@ GROUP BY sales.customer_id;
 - From Day 8 to the last day of January 2021, each $1 spent earns 10 points. However, sushi continues to earn double the points at 20 points per $1 spent.
 
 #### Steps:
-- Create a CTE called `dates_cte`. 
-- In `dates_cte`, calculate the `valid_date` by adding 6 days to the `join_date` and determine the `last_date` of the month by subtracting 1 day from the last day of January 2021.
-- From `dannys_diner.sales` table, join `dates_cte` on `customer_id` column, ensuring that the `order_date` of the sale is after the `join_date` (`dates.join_date <= sales.order_date`) and not later than the `last_date` (`sales.order_date <= dates.last_date`).
-- Then, join `dannys_diner.menu` table based on the `product_id` column.
-- In the outer query, calculate the points by using a `CASE` statement to determine the points based on our assumptions above. 
-    - If the `product_name` is 'sushi', multiply the price by 2 and then by 10. For orders placed between `join_date` and `valid_date`, also multiply the price by 2 and then by 10. 
-    - For all other products, multiply the price by 10.
-- Calculate the sum of points for each customer.
+- Create a CTE called `points`. 
+- In the CTE, select the appropriate columns and calculate the points as `purchase_points` by using a `CASE` statement to determine the points based on our assumptions above.
+	- If purchase is made anytime from `join_date` to 7 days from `join_date` (`s.order_date >= mm.join_date AND s.order_date <= DATE_SUB(mm.join_date, INTERVAL -6 DAY)`) then multiply the price of all the items by 10 and then by 2 as the first week member bonus.
+	- Else if purchase is made before `join_date` or after 7 days from `join_date` till the last day of January 2021, then
+ 		- If the `product_id` is 1 (for 'sushi'), multiply the price by 2 and then by 10.
+   		- Else for all other products, multiply the price by 10.
+- From `dannys_diner.menu` table, join `dannys_diner.sales` on `product_id` column, ensuring that `sales.order_date` is earlier than '2021-01-31' (`sales.order_date < '2021-01-31'`).
+- Then, join `dannys_diner.members` table based on the `customer_id` column.
+- Order the result by `sales.customer_id` & `sales.order_date` in ascending order.
+- In the outer query, select the columns `members.customer_id` and calculate the sum of `points.purchase_points` as total_points.
+- Then, join `points` CTE with `dannys_diner.members` table based on `customer_id` column.
+- Group the results by `members.customer_id`.
+- Order the result by `members.customer_id` in ascending order.
 
 #### Answer:
 | customer_id | total_points | 
 | ----------- | ---------- |
-| A           | 1020 |
-| B           | 320 |
+| A           | 1370 |
+| B           | 820 |
 
-- Total points for Customer A is 1,020.
-- Total points for Customer B is 320.
+- Total points for Customer A is 1,370.
+- Total points for Customer B is 820.
 
 ***
 
@@ -445,27 +438,25 @@ GROUP BY sales.customer_id;
 
 ```sql
 SELECT 
-  sales.customer_id, 
-  sales.order_date,  
-  menu.product_name, 
-  menu.price,
-  CASE
-    WHEN members.join_date > sales.order_date THEN 'N'
-    WHEN members.join_date <= sales.order_date THEN 'Y'
-    ELSE 'N' END AS member_status
-FROM dannys_diner.sales
-LEFT JOIN dannys_diner.members
-  ON sales.customer_id = members.customer_id
-INNER JOIN dannys_diner.menu
-  ON sales.product_id = menu.product_id
-ORDER BY members.customer_id, sales.order_date
+    s.customer_id,
+    s.order_date,
+    mn.product_name,
+    mn.price,
+    CASE
+      WHEN s.order_date >= mm.join_date THEN 'Y'
+      ELSE 'N'
+    END AS 'member'
+FROM dannys_diner.sales s
+LEFT JOIN dannys_diner.members mm ON mm.customer_id = s.customer_id
+INNER JOIN dannys_diner.menu mn ON mn.product_id = s.product_id
+ORDER BY s.customer_id, s.order_date, mn.product_name;
 ```
  
 #### Answer: 
 | customer_id | order_date | product_name | price | member |
 | ----------- | ---------- | -------------| ----- | ------ |
-| A           | 2021-01-01 | sushi        | 10    | N      |
 | A           | 2021-01-01 | curry        | 15    | N      |
+| A           | 2021-01-01 | sushi        | 10    | N      |
 | A           | 2021-01-07 | curry        | 15    | Y      |
 | A           | 2021-01-10 | ramen        | 12    | Y      |
 | A           | 2021-01-11 | ramen        | 12    | Y      |
@@ -487,51 +478,47 @@ ORDER BY members.customer_id, sales.order_date
 **Danny also requires further information about the ```ranking``` of customer products, but he purposely does not need the ranking for non-member purchases so he expects null ```ranking``` values for the records when customers are not yet part of the loyalty program.**
 
 ```sql
-WITH customers_data AS (
-  SELECT 
-    sales.customer_id, 
-    sales.order_date,  
-    menu.product_name, 
-    menu.price,
-    CASE
-      WHEN members.join_date > sales.order_date THEN 'N'
-      WHEN members.join_date <= sales.order_date THEN 'Y'
-      ELSE 'N' END AS member_status
-  FROM dannys_diner.sales
-  LEFT JOIN dannys_diner.members
-    ON sales.customer_id = members.customer_id
-  INNER JOIN dannys_diner.menu
-    ON sales.product_id = menu.product_id
-)
-
+WITH customer_data AS (
+SELECT
+    s.customer_id,
+    s.order_date,
+    mn.product_name,
+    mn.price,
+    CASE 
+      WHEN s.order_date >= mm.join_date THEN 'Y'
+      ELSE 'N'
+    END AS member_status
+FROM dannys_diner.sales s
+LEFT JOIN dannys_diner.members mm ON mm.customer_id = s.customer_id
+INNER JOIN dannys_diner.menu mn ON mn.product_id = s.product_id
+ORDER BY s.customer_id, s.order_date, mn.product_name)
 SELECT 
-  *, 
-  CASE
-    WHEN member_status = 'N' then NULL
-    ELSE RANK () OVER (
-      PARTITION BY customer_id, member_status
-      ORDER BY order_date
-  ) END AS ranking
-FROM customers_data;
+    cd.*,
+    CASE
+      WHEN cd.member_status = "N" THEN NULL
+      ELSE RANK() OVER (PARTITION BY cd.customer_id, cd.member_status 
+			ORDER BY cd.order_date)
+    END AS ranking
+FROM customer_data cd;
 ```
 
 #### Answer: 
-| customer_id | order_date | product_name | price | member | ranking | 
+| customer_id | order_date | product_name | price | member_status | ranking | 
 | ----------- | ---------- | -------------| ----- | ------ |-------- |
-| A           | 2021-01-01 | sushi        | 10    | N      | NULL
-| A           | 2021-01-01 | curry        | 15    | N      | NULL
-| A           | 2021-01-07 | curry        | 15    | Y      | 1
-| A           | 2021-01-10 | ramen        | 12    | Y      | 2
-| A           | 2021-01-11 | ramen        | 12    | Y      | 3
-| A           | 2021-01-11 | ramen        | 12    | Y      | 3
-| B           | 2021-01-01 | curry        | 15    | N      | NULL
-| B           | 2021-01-02 | curry        | 15    | N      | NULL
-| B           | 2021-01-04 | sushi        | 10    | N      | NULL
-| B           | 2021-01-11 | sushi        | 10    | Y      | 1
-| B           | 2021-01-16 | ramen        | 12    | Y      | 2
-| B           | 2021-02-01 | ramen        | 12    | Y      | 3
-| C           | 2021-01-01 | ramen        | 12    | N      | NULL
-| C           | 2021-01-01 | ramen        | 12    | N      | NULL
-| C           | 2021-01-07 | ramen        | 12    | N      | NULL
+| A           | 2021-01-01 | curry        | 15    | N      | NULL    |
+| A           | 2021-01-01 | sushi        | 10    | N      | NULL    |
+| A           | 2021-01-07 | curry        | 15    | Y      | 1       |
+| A           | 2021-01-10 | ramen        | 12    | Y      | 2       |
+| A           | 2021-01-11 | ramen        | 12    | Y      | 3       |
+| A           | 2021-01-11 | ramen        | 12    | Y      | 3       |
+| B           | 2021-01-01 | curry        | 15    | N      | NULL    |
+| B           | 2021-01-02 | curry        | 15    | N      | NULL    |
+| B           | 2021-01-04 | sushi        | 10    | N      | NULL    |
+| B           | 2021-01-11 | sushi        | 10    | Y      | 1       |
+| B           | 2021-01-16 | ramen        | 12    | Y      | 2       |
+| B           | 2021-02-01 | ramen        | 12    | Y      | 3       |
+| C           | 2021-01-01 | ramen        | 12    | N      | NULL    |
+| C           | 2021-01-01 | ramen        | 12    | N      | NULL    |
+| C           | 2021-01-07 | ramen        | 12    | N      | NULL    |
 
 ***
