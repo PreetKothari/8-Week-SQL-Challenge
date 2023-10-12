@@ -2,8 +2,6 @@
 
 <img src="https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/bdf02db3-ad4e-4288-b657-6c7a1aa46764" alt="Image" width="500" height="520">
 
-![Pizza Runner]()
-
 ## 📚 Table of Contents
 - [Business Task](#business-task)
 - [Entity Relationship Diagram](#entity-relationship-diagram)
