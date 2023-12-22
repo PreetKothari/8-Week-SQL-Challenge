@@ -15,5 +15,7 @@ Please find the solution links for the case studies below. Simply click on the l
 - [Case Study #4: Data Bank]()
 - [Case Study #5: Data Mart]()
 - [Case Study #6: Clique Bait]()
-- [Case Study #7: Balanced Tree](https://github.com/katiehuangx/8-Week-SQL-Challenge/tree/main/Case%20Study%20%237%20-%20Balanced%20Tree%20Clothing%20Co.)
+- [Case Study #7: Balanced Tree]()
 - [Case Study #8: Fresh Segments]()
+
+
