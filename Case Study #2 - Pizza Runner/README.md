@@ -199,15 +199,26 @@ This is what the clean `runner_orders_temp` table looks like, and we will use th
 ### 1. How many pizzas were ordered?
 
 ````sql
-SELECT COUNT(*) AS pizza_order_count
-FROM customer_orders_temp;
+SELECT 
+	COUNT(order_id) AS pizza_order_count 
+FROM pizza_runner.customer_orders_temp;
 ````
+
+| customer_id | total_money_spent |
+| ----------- | ----------- |
+| A           | 76          |
+| B           | 74          |
+| C           | 36          |
 
 **Answer:**
 
-![1*Ma9L4y6O_zhln6Wy7CdWMQ](https://user-images.githubusercontent.com/81607668/129473598-d6d55ab2-59c7-4040-97db-d1b0c1c5b294.png)
+| pizza_order_count |
+| ------------ |
+| 14           |
 
-- Total of 14 pizzas were ordered.
+![a1](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/53fe55fb-ee2d-4789-95c8-0555544c5655)
+
+- A total of 14 pizzas were ordered.
 
 ### 2. How many unique customer orders were made?
 
