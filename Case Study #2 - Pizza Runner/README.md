@@ -15,23 +15,27 @@
 ***
 
 ## Business Task
-Danny is expanding his new Pizza Empire and at the same time, he wants to Uberize it, so Pizza Runner was launched!
+Danny is expanding his new Pizza Empire, and at the same time, he wants to Uberize it, so Pizza Runner was launched!
 
 Danny started by recruiting “runners” to deliver fresh pizza from Pizza Runner Headquarters (otherwise known as Danny’s house) and also maxed out his credit card to pay freelance developers to build a mobile app to accept orders from customers. 
 
 ## Entity Relationship Diagram
 
+
 ![Pizza Runner](https://github.com/katiehuangx/8-Week-SQL-Challenge/assets/81607668/78099a4e-4d0e-421f-a560-b72e4321f530)
+![Entity Relationship Diagram](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/e7648e46-99e4-46f5-933e-d54bbf0013b6)
+
 
 ## 🧼 Data Cleaning & Transformation
 
 ### 🔨 Table: customer_orders
 
-Looking at the `customer_orders` table below, we can see that there are
-- In the `exclusions` column, there are missing/ blank spaces ' ' and null values. 
-- In the `extras` column, there are missing/ blank spaces ' ' and null values.
+Looking at the `customer_orders` table below, we can see that there are missing data/blank spaces ' ' and null values in the -
+- `exclusions` column
+- `extras` column
+![customer_orders_uncleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/fa51a7f4-b0e6-461b-8b1a-d504c36cb454)
 
-<img width="1063" alt="image" src="https://user-images.githubusercontent.com/81607668/129472388-86e60221-7107-4751-983f-4ab9d9ce75f0.png">
+<img width="1063" alt="image" src="https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/fa51a7f4-b0e6-461b-8b1a-d504c36cb454">
 
 Our course of action to clean the table:
 - Create a temporary table with all the columns
