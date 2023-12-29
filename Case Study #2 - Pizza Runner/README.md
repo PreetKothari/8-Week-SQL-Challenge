@@ -21,10 +21,7 @@ Danny started by recruiting “runners” to deliver fresh pizza from Pizza Runn
 
 ## Entity Relationship Diagram
 
-
-![Pizza Runner](https://github.com/katiehuangx/8-Week-SQL-Challenge/assets/81607668/78099a4e-4d0e-421f-a560-b72e4321f530)
 ![Entity Relationship Diagram](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/e7648e46-99e4-46f5-933e-d54bbf0013b6)
-
 
 ## 🧼 Data Cleaning & Transformation
 
@@ -33,35 +30,40 @@ Danny started by recruiting “runners” to deliver fresh pizza from Pizza Runn
 Looking at the `customer_orders` table below, we can see that there are missing data/blank spaces ' ' and null values in the -
 - `exclusions` column
 - `extras` column
+
 ![customer_orders_uncleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/fa51a7f4-b0e6-461b-8b1a-d504c36cb454)
 
 <img width="1063" alt="image" src="https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/fa51a7f4-b0e6-461b-8b1a-d504c36cb454">
 
 Our course of action to clean the table:
 - Create a temporary table with all the columns
-- Remove null values in `exlusions` and `extras` columns and replace with blank space ' '.
+- Remove null values in `exlusions` and `extras` columns and replace them with `Null` values.
 
 ````sql
-CREATE TEMP TABLE customer_orders_temp AS
+DROP TEMPORARY TABLE IF EXISTS customer_orders_temp;
+CREATE TEMPORARY TABLE customer_orders_temp
 SELECT 
-  order_id, 
-  customer_id, 
-  pizza_id, 
-  CASE
-	  WHEN exclusions IS null OR exclusions LIKE 'null' THEN ' '
-	  ELSE exclusions
-	  END AS exclusions,
-  CASE
-	  WHEN extras IS NULL or extras LIKE 'null' THEN ' '
-	  ELSE extras
-	  END AS extras,
-	order_time
+	order_id, 
+	customer_id, 
+	pizza_id,
+	CASE 
+		WHEN exclusions = '' OR exclusions LIKE '%null%' THEN NULL
+		ELSE exclusions
+	END AS exclusions,
+	CASE 
+		WHEN extras = '' OR extras LIKE '%null%' THEN NULL
+		ELSE extras
+	END AS extras,
+	order_time,
+	ROW_NUMBER() OVER (ORDER BY order_id) AS record_id
 FROM pizza_runner.customer_orders;
 `````
 
-This is how the clean `customers_orders_temp` table looks like and we will use this table to run all our queries.
+This is what the clean `customers_orders_temp` table looks like, and we will use this table to run all our queries.
 
 <img width="1058" alt="image" src="https://user-images.githubusercontent.com/81607668/129472551-fe3d90a0-1e8b-4f32-a2a7-2ecd3ac469ef.png">
+
+![customer_orders_temp_cleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/3f28ceed-d665-4b73-84d5-1fe5600bddcc)
 
 ***
 
