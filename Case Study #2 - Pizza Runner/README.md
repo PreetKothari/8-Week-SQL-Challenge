@@ -204,32 +204,27 @@ SELECT
 FROM pizza_runner.customer_orders_temp;
 ````
 
-| customer_id | total_money_spent |
-| ----------- | ----------- |
-| A           | 76          |
-| B           | 74          |
-| C           | 36          |
-
 **Answer:**
 
 | pizza_order_count |
 | ------------ |
 | 14           |
 
-![a1](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/53fe55fb-ee2d-4789-95c8-0555544c5655)
-
 - A total of 14 pizzas were ordered.
 
 ### 2. How many unique customer orders were made?
 
 ````sql
-SELECT COUNT(DISTINCT order_id) AS unique_order_count
-FROM customer_orders_temp;
+SELECT 
+	COUNT(DISTINCT order_id) AS unique_orders 
+FROM pizza_runner.customer_orders_temp;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129737993-710198bd-433d-469f-b5de-14e4022a3a45.png)
+| unique_orders |
+| ------------ |
+| 10           |
 
 - There are 10 unique customer orders.
 
@@ -237,39 +232,45 @@ FROM customer_orders_temp;
 
 ````sql
 SELECT 
-  runner_id, 
-  COUNT(order_id) AS successful_orders
-FROM #runner_orders
-WHERE distance != 0
+	runner_id, 
+    	COUNT(order_id) AS successful_orders
+FROM pizza_runner.runner_orders_temp
+WHERE distance IS NOT NULL 
 GROUP BY runner_id;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129738112-6eada46a-8c32-495a-8e26-793b2fec89ef.png)
+| runnrr_id | successful_orders |
+| ----------- | ----------- |
+| 1           | 4          |
+| 2           | 3          |
+| 3           | 1          |
 
-- Runner 1 has 4 successful delivered orders.
-- Runner 2 has 3 successful delivered orders.
-- Runner 3 has 1 successful delivered order.
+- Runner 1 has 4 successfully delivered orders.
+- Runner 2 has 3 successfully delivered orders.
+- Runner 3 has 1 successfully delivered order.
 
 ### 4. How many of each type of pizza was delivered?
 
 ````sql
 SELECT 
-  p.pizza_name, 
-  COUNT(c.pizza_id) AS delivered_pizza_count
-FROM #customer_orders AS c
-JOIN #runner_orders AS r
-  ON c.order_id = r.order_id
-JOIN pizza_names AS p
-  ON c.pizza_id = p.pizza_id
-WHERE r.distance != 0
-GROUP BY p.pizza_name;
+	p.pizza_name, 
+    	COUNT(c.pizza_id) AS delivered_pizzas 
+FROM pizza_runner.customer_orders_temp c
+JOIN pizza_runner.runner_orders_temp r ON c.order_id = r.order_id 
+				AND r.pickup_time IS NOT NULL
+JOIN pizza_runner.pizza_names p ON c.pizza_id = p.pizza_id
+GROUP BY p.pizza_name
+ORDER BY c.pizza_id;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129738140-c9c002ff-5aed-48ab-bdfa-cadbd98973a9.png)
+| pizza_name | delivered_pizzas |
+| ----------- | ----------- |
+| Meatlovers  | 9          |
+| Vegetarian  | 3          |
 
 - There are 9 delivered Meatlovers pizzas and 3 Vegetarian pizzas.
 
@@ -277,104 +278,118 @@ GROUP BY p.pizza_name;
 
 ````sql
 SELECT 
-  c.customer_id, 
-  p.pizza_name, 
-  COUNT(p.pizza_name) AS order_count
-FROM #customer_orders AS c
-JOIN pizza_names AS p
-  ON c.pizza_id= p.pizza_id
+	c.customer_id,
+	p.pizza_name,
+	COUNT(c.pizza_id) AS order_count
+FROM pizza_runner.customer_orders_temp c
+JOIN pizza_runner.pizza_names p ON c.pizza_id = p.pizza_id
 GROUP BY c.customer_id, p.pizza_name
-ORDER BY c.customer_id;
+ORDER BY c.customer_id, c.pizza_id;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129738167-269df165-1c9a-446a-b757-c7fc9a9021ed.png)
+| customer_id | pizza_name | order_count | 
+| ----------- | ---------- | ----------- | 
+| 101         | Meatlovers | 2           |
+| 101         | Vegetarian | 1           |
+| 102         | Meatlovers | 2           |
+| 102         | Vegetarian | 1           |
+| 103         | Meatlovers | 3           |
+| 103         | Vegetarian | 1           |
+| 104         | Meatlovers | 3           |
+| 105         | Vegetarian | 1           |
 
 - Customer 101 ordered 2 Meatlovers pizzas and 1 Vegetarian pizza.
-- Customer 102 ordered 2 Meatlovers pizzas and 2 Vegetarian pizzas.
+- Customer 102 ordered 2 Meatlovers pizzas and 1 Vegetarian pizza.
 - Customer 103 ordered 3 Meatlovers pizzas and 1 Vegetarian pizza.
-- Customer 104 ordered 1 Meatlovers pizza.
+- Customer 104 ordered 3 Meatlovers pizzas.
 - Customer 105 ordered 1 Vegetarian pizza.
 
 ### 6. What was the maximum number of pizzas delivered in a single order?
 
 ````sql
-WITH pizza_count_cte AS
-(
-  SELECT 
-    c.order_id, 
-    COUNT(c.pizza_id) AS pizza_per_order
-  FROM #customer_orders AS c
-  JOIN #runner_orders AS r
-    ON c.order_id = r.order_id
-  WHERE r.distance != 0
-  GROUP BY c.order_id
-)
-
 SELECT 
-  MAX(pizza_per_order) AS pizza_count
-FROM pizza_count_cte;
+	c.order_id,
+    	COUNT(c.order_id) AS pizza_per_order 
+FROM pizza_runner.customer_orders_temp c
+JOIN pizza_runner.runner_orders_temp r ON r.order_id = c.order_id 
+				   AND r.distance IS NOT NULL
+GROUP BY c.order_id
+ORDER BY COUNT(c.order_id) DESC;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129738201-f676edd4-2530-4663-9ed8-6e6ec4d9cc68.png)
+| order_id    | pizza_per_order | 
+| ----------- | ----------- | 
+| 4           | 3           |
+| 3           | 2           |
+| 10          | 2           |
+| 1           | 1           |
+| 2           | 1           |
+| 5           | 1           |
+| 7           | 1           |
+| 8           | 1           |
 
-- Maximum number of pizza delivered in a single order is 3 pizzas.
+- Maximum number of pizzas delivered in a single order is 3 pizzas.
 
 ### 7. For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
 
 ````sql
 SELECT 
-  c.customer_id,
-  SUM(
-    CASE WHEN c.exclusions <> ' ' OR c.extras <> ' ' THEN 1
-    ELSE 0
-    END) AS at_least_1_change,
-  SUM(
-    CASE WHEN c.exclusions = ' ' AND c.extras = ' ' THEN 1 
-    ELSE 0
-    END) AS no_change
-FROM #customer_orders AS c
-JOIN #runner_orders AS r
-  ON c.order_id = r.order_id
-WHERE r.distance != 0
+	c.customer_id,
+    	SUM(CASE 
+		WHEN c.exclusions IS NOT NULL OR c.extras IS NOT NULL THEN 1
+            	ELSE 0
+	END) AS at_least_1_change,
+	SUM(CASE 
+		WHEN c.exclusions IS NULL AND c.extras IS NULL THEN 1
+            	ELSE 0
+	END) AS no_change
+FROM pizza_runner.customer_orders_temp c
+JOIN pizza_runner.runner_orders_temp r ON r.order_id = c.order_id 
+				   AND r.distance IS NOT NULL
 GROUP BY c.customer_id
 ORDER BY c.customer_id;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129738236-2c4383cb-9d42-458c-b9be-9963c336ee58.png)
+| customer_id | at_least_1_change | no_change | 
+| ----------- | ---------- | ----------- | 
+| 101         | 0          | 2           |
+| 102         | 0          | 3           |
+| 103         | 3          | 0           |
+| 104         | 2          | 1           |
+| 105         | 1          | 0           |
 
-- Customer 101 and 102 likes his/her pizzas per the original recipe.
-- Customer 103, 104 and 105 have their own preference for pizza topping and requested at least 1 change (extra or exclusion topping) on their pizza.
+- Customers 101 and 102 likes his/her pizzas per the original recipe.
+- Customer 103, 104, and 105 have their own preferences for pizza toppings and requested at least 1 change (extra topping or exclusion of topping) on their pizza.
 
 ### 8. How many pizzas were delivered that had both exclusions and extras?
 
 ````sql
-SELECT  
-  SUM(
-    CASE WHEN exclusions IS NOT NULL AND extras IS NOT NULL THEN 1
-    ELSE 0
-    END) AS pizza_count_w_exclusions_extras
-FROM #customer_orders AS c
-JOIN #runner_orders AS r
-  ON c.order_id = r.order_id
-WHERE r.distance >= 1 
-  AND exclusions <> ' ' 
-  AND extras <> ' ';
+SELECT
+    SUM(CASE 
+		WHEN c.exclusions IS NOT NULL AND c.extras IS NOT NULL THEN 1
+    		ELSE 0
+    END) AS pizza_delivered_w_exclusions_extras
+FROM pizza_runner.customer_orders_temp c
+JOIN pizza_runner.runner_orders_temp r ON r.order_id = c.order_id 
+				   AND r.distance IS NOT NULL;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129738278-dd3e7056-309d-42fc-a5e3-00f7b5d4609e.png)
+| pizza_delivered_w_exclusions_extras |
+| ------------ |
+| 1            |
 
-- Only 1 pizza delivered that had both extra and exclusion topping. That’s one fussy customer!
+- Only 1 pizza was delivered that had both extra and exclusion toppings. That’s one fussy customer!
 
 ### 9. What was the total volume of pizzas ordered for each hour of the day?
-
+ascscscascvascac
 ````sql
 SELECT 
   DATEPART(HOUR, [order_time]) AS hour_of_day, 
