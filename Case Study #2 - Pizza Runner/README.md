@@ -27,17 +27,17 @@ Danny started by recruiting “runners” to deliver fresh pizza from Pizza Runn
 
 ### 🔨 Table: customer_orders
 
-Looking at the `customer_orders` table below, we can see that there are missing data/blank spaces ' ' and null values in the -
+Looking at the `customer_orders` table below, we can see that there are missing data/blank spaces " " and "null" values in the -
 - `exclusions` column
 - `extras` column
+Also, we can see that some order ids are being repeated thus making the `order_id` column non-unique.
 
 ![customer_orders_uncleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/fa51a7f4-b0e6-461b-8b1a-d504c36cb454)
 
-<img width="1063" alt="image" src="https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/fa51a7f4-b0e6-461b-8b1a-d504c36cb454">
-
 Our course of action to clean the table:
-- Create a temporary table with all the columns
-- Remove null values in `exlusions` and `extras` columns and replace them with `Null` values.
+- Create a temporary table with all the columns.
+- Remove "null" values in the `exclusions` and the `extras` columns and replace them with `Null` values.
+- Add another column named `record_id` to provide a unique number to each record in the table.
 
 ````sql
 DROP TEMPORARY TABLE IF EXISTS customer_orders_temp;
@@ -59,54 +59,122 @@ SELECT
 FROM pizza_runner.customer_orders;
 `````
 
-This is what the clean `customers_orders_temp` table looks like, and we will use this table to run all our queries.
-
-<img width="1058" alt="image" src="https://user-images.githubusercontent.com/81607668/129472551-fe3d90a0-1e8b-4f32-a2a7-2ecd3ac469ef.png">
+This is what the clean `customer_orders_temp` table looks like, and we will use this table to run all our queries.
 
 ![customer_orders_temp_cleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/3f28ceed-d665-4b73-84d5-1fe5600bddcc)
 
 ***
 
-### 🔨 Table: runner_orders
+### 🔨 Temporary Tables for Extras & Exclusions
 
-Looking at the `runner_orders` table below, we can see that there are
-- In the `exclusions` column, there are missing/ blank spaces ' ' and null values. 
-- In the `extras` column, there are missing/ blank spaces ' ' and null values
+Looking at the `customer_orders_temp` table created above, we can notice that some orders have multiple extras or exclusions and instead of reporting them separately they have been grouped in a string separated with a `,`. This is going to pose a problem during our analysis. 
 
-<img width="1037" alt="image" src="https://user-images.githubusercontent.com/81607668/129472585-badae450-52d2-442e-9d50-e4d0d8fce83a.png">
-
-Our course of action to clean the table:
-- In `pickup_time` column, remove nulls and replace with blank space ' '.
-- In `distance` column, remove "km" and nulls and replace with blank space ' '.
-- In `duration` column, remove "minutes", "minute" and nulls and replace with blank space ' '.
-- In `cancellation` column, remove NULL and null and and replace with blank space ' '.
+Our course of action to make the exclusions & extras easier to call:
+- Create temporary tables for each `exclusions` and `extras`.
+- Ungroup the rows with multiple values in `exclusions` and `extras` columns and add separate rows for each.
 
 ````sql
-CREATE TEMP TABLE runner_orders_temp AS
+DROP TEMPORARY TABLE IF EXISTS customer_orders_exclusions_temp;
+CREATE TEMPORARY TABLE customer_orders_exclusions_temp
+WITH RECURSIVE unwound_exclusions AS (
 SELECT 
-  order_id, 
-  runner_id,  
-  CASE
-	  WHEN pickup_time LIKE 'null' THEN ' '
-	  ELSE pickup_time
-	  END AS pickup_time,
-  CASE
-	  WHEN distance LIKE 'null' THEN ' '
-	  WHEN distance LIKE '%km' THEN TRIM('km' from distance)
-	  ELSE distance 
-    END AS distance,
-  CASE
-	  WHEN duration LIKE 'null' THEN ' '
-	  WHEN duration LIKE '%mins' THEN TRIM('mins' from duration)
-	  WHEN duration LIKE '%minute' THEN TRIM('minute' from duration)
-	  WHEN duration LIKE '%minutes' THEN TRIM('minutes' from duration)
-	  ELSE duration
-	  END AS duration,
-  CASE
-	  WHEN cancellation IS NULL or cancellation LIKE 'null' THEN ' '
-	  ELSE cancellation
-	  END AS cancellation
-FROM pizza_runner.runner_orders;
+	order_id, 
+	pizza_id, 
+    	exclusions,
+    	record_id
+FROM pizza_runner.customer_orders_temp
+UNION ALL
+SELECT
+	order_id,
+	pizza_id, 
+	REGEXP_REPLACE(REPLACE(exclusions," ",""), '^[^,]*,', '') AS exclusions,
+    	record_id
+FROM unwound_exclusions
+WHERE exclusions LIKE '%,%')
+SELECT 
+	order_id,
+	pizza_id,
+   	CAST(REGEXP_REPLACE(exclusions, ',.*', '') AS UNSIGNED) AS exclusions_topping_id,
+    	record_id
+FROM unwound_exclusions
+ORDER BY order_id, pizza_id;
+````
+The ungrouped `customer_orders_exclusions_temp` table looks like this:
+
+![customer_orders_exclusions](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/bd9f6fc0-eae3-4253-a10f-3b7e482b58dc)
+
+````sql
+DROP TEMPORARY TABLE IF EXISTS customer_orders_extras_temp;
+CREATE TEMPORARY TABLE customer_orders_extras_temp
+WITH RECURSIVE unwound_extras AS (
+SELECT 
+	order_id, 
+    	pizza_id, 
+    	extras,
+   	record_id
+FROM pizza_runner.customer_orders_temp
+UNION ALL
+SELECT
+	order_id,
+	pizza_id, 
+	REGEXP_REPLACE(REPLACE(extras," ",""), '^[^,]*,', '') AS extras,
+    	record_id
+FROM unwound_extras
+WHERE extras LIKE '%,%')
+SELECT 
+	order_id,
+	pizza_id,
+    	CAST(REGEXP_REPLACE(extras, ',.*', '') AS UNSIGNED) AS extras_topping_id,
+    	record_id
+FROM unwound_extras
+ORDER BY order_id, pizza_id;
+````
+The ungrouped `customer_orders_extras_temp` table looks like this:
+
+![customer_orders_extras](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/492a73f3-2ddd-435e-8841-945db9507f18)
+
+***
+
+### 🔨 Table: runner_orders
+
+Looking at the `runner_orders` table below, we can see that in the -
+- `pickup_time`, `distance`, `duration`, and `cancellation` columns there are missing data/blank spaces " " and "null" values.
+- `distance` column has "km" after some of the entries.
+- `duration` column has "mins", "minute" or "minutes" after some of the entries.
+
+![runner_orders_uncleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/e4ac1f63-a854-4488-b9db-3957a810ca8f)
+
+Our course of action to clean the table:
+- In `pickup_time`, `distance`, `duration`, and `cancellation` columns, remove "null" and replace them with `Null`.
+- In `distance` column, remove "km".
+- In `duration` column, remove "minutes", "minute" and "mins".
+
+````sql
+DROP TEMPORARY TABLE IF EXISTS runner_orders_temp;
+CREATE TEMPORARY TABLE runner_orders_temp
+SELECT
+	order_id,
+	runner_id, 
+	CASE 
+		WHEN pickup_time LIKE '%null%' THEN NULL
+        	ELSE pickup_time
+    	END AS pickup_time,
+   	CASE 
+		WHEN distance LIKE '%null%' THEN NULL
+        	WHEN distance LIKE '%km' THEN RTRIM(SUBSTR(distance,1,POSITION("k" IN distance)-1))
+        	ELSE distance
+    	END AS distance,
+    	CASE 
+		WHEN duration LIKE '%null%' THEN NULL
+        	WHEN duration LIKE '%mins' OR duration LIKE '%minutes' OR duration LIKE '%minute' 
+				THEN RTRIM(SUBSTR(duration,1,POSITION("m" IN duration)-1))
+        	ELSE duration
+    	END AS duration,
+    	CASE 
+		WHEN cancellation = '' OR cancellation LIKE '%null%' THEN NULL
+        	ELSE cancellation
+    	END AS cancellation
+FROM runner_orders;
 ````
 
 Then, we alter the `pickup_time`, `distance` and `duration` columns to the correct data type.
@@ -118,9 +186,9 @@ ALTER COLUMN distance FLOAT,
 ALTER COLUMN duration INT;
 ````
 
-This is how the clean `runner_orders_temp` table looks like and we will use this table to run all our queries.
+This is what the clean `runner_orders_temp` table looks like, and we will use this table to run all our queries.
 
-<img width="915" alt="image" src="https://user-images.githubusercontent.com/81607668/129472778-6403381d-6e30-4884-a011-737b1eff7379.png">
+![runner_orders_cleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/2ae1e36b-3c80-454e-8906-ab2d1510abfd)
 
 ***
 
