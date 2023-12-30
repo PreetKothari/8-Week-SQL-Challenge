@@ -21,6 +21,10 @@ Danny started by recruiting “runners” to deliver fresh pizza from Pizza Runn
 
 ## Entity Relationship Diagram
 
+Because Danny had a few years of experience as a data scientist - he was very aware that data collection was going to be critical for his business’ growth.
+
+He has prepared for us an entity relationship diagram of his database design but requires further assistance to clean his data and apply some basic calculations so he can better direct his runners and optimize Pizza Runner’s operations.
+
 ![Entity Relationship Diagram](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/e7648e46-99e4-46f5-933e-d54bbf0013b6)
 
 ## 🧼 Data Cleaning & Transformation
@@ -30,6 +34,7 @@ Danny started by recruiting “runners” to deliver fresh pizza from Pizza Runn
 Looking at the `customer_orders` table below, we can see that there are missing data/blank spaces " " and "null" values in the -
 - `exclusions` column
 - `extras` column
+
 Also, we can see that some order ids are being repeated thus making the `order_id` column non-unique.
 
 ![customer_orders_uncleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/fa51a7f4-b0e6-461b-8b1a-d504c36cb454)
@@ -189,6 +194,43 @@ ALTER COLUMN duration INT;
 This is what the clean `runner_orders_temp` table looks like, and we will use this table to run all our queries.
 
 ![runner_orders_cleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/2ae1e36b-3c80-454e-8906-ab2d1510abfd)
+
+***
+
+### 🔨 Table: pizza_recipes
+
+Looking at the `pizza_recipes` table below, we can see that in the `toppings` column, all the topping ids for a pizza recipe are grouped in a string separated with a `,`, instead of reporting them separately. This is going to pose a problem during our analysis.
+
+![pizza_recipes_temp_uncleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/17e78658-5022-4596-9380-cecc88414b20)
+
+Our course of action to clean the table:
+- Create a temporary table with all the columns, plus a `topping_name` column from the `pizza_toppings` table to make our analysis easier.
+- Ungroup the rows with multiple topping values and add separate rows for each value.
+
+````sql
+DROP TEMPORARY TABLE IF EXISTS pizza_recipes_temp;
+CREATE TEMPORARY TABLE pizza_recipes_temp
+WITH RECURSIVE unwound AS (
+SELECT 
+	*
+FROM pizza_runner.pizza_recipes
+UNION ALL
+SELECT 
+	pizza_id, 
+	REGEXP_REPLACE(REPLACE(toppings," ",""), '^[^,]*,', '') AS toppings
+FROM unwound
+WHERE toppings LIKE '%,%')
+SELECT 
+	u.pizza_id,
+    	CAST(REGEXP_REPLACE(u.toppings, ',.*', '') AS UNSIGNED) AS topping_id,
+    	t.topping_name
+FROM unwound u
+JOIN pizza_runner.pizza_toppings t ON t.topping_id = CAST(REGEXP_REPLACE(u.toppings, ',.*', '') AS UNSIGNED)
+ORDER BY pizza_id;
+````
+This is what the clean `pizza_recipes_temp` table looks like:
+
+![pizza_recipes_temp_cleaned](https://github.com/PreetKothari/8-Week-SQL-Challenge/assets/87279526/aaee0a3a-2eb8-49dc-a2ad-d373f2bad146)
 
 ***
 
@@ -389,37 +431,50 @@ JOIN pizza_runner.runner_orders_temp r ON r.order_id = c.order_id
 - Only 1 pizza was delivered that had both extra and exclusion toppings. That’s one fussy customer!
 
 ### 9. What was the total volume of pizzas ordered for each hour of the day?
-ascscscascvascac
+
 ````sql
-SELECT 
-  DATEPART(HOUR, [order_time]) AS hour_of_day, 
-  COUNT(order_id) AS pizza_count
-FROM #customer_orders
-GROUP BY DATEPART(HOUR, [order_time]);
+SELECT
+	HOUR(order_time) AS hour_of_day,
+	COUNT(order_id) AS order_volume
+FROM pizza_runner.customer_orders_temp
+GROUP BY HOUR(order_time)
+ORDER BY HOUR(order_time);
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129738302-573430e9-1785-4c71-adc1-464ffa94de8a.png)
+| hour_of_day | order_volume | 
+| ----------- | ------------ | 
+| 11          | 1            |
+| 13          | 3            |
+| 18          | 3            |
+| 19          | 1            |
+| 21          | 3            |
+| 23          | 3            |
 
-- Highest volume of pizza ordered is at 13 (1:00 pm), 18 (6:00 pm) and 21 (9:00 pm).
-- Lowest volume of pizza ordered is at 11 (11:00 am), 19 (7:00 pm) and 23 (11:00 pm).
+- Highest volume of pizza ordered is at 13 (1:00 pm), 18 (6:00 pm), 21 (9:00 pm), and 23 (11:00 pm).
+- Lowest volume of pizza ordered is at 11 (11:00 am), and 19 (7:00 pm).
 
 ### 10. What was the volume of orders for each day of the week?
 
 ````sql
 SELECT 
-  FORMAT(DATEADD(DAY, 2, order_time),'dddd') AS day_of_week, -- add 2 to adjust 1st day of the week as Monday
-  COUNT(order_id) AS total_pizzas_ordered
-FROM #customer_orders
-GROUP BY FORMAT(DATEADD(DAY, 2, order_time),'dddd');
+	DAYNAME(order_time) AS week_day,
+    	COUNT(order_id) AS order_volume
+FROM pizza_runner.customer_orders_temp
+GROUP BY DAYNAME(order_time);
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129738331-233744f6-3b57-4f4f-9a51-f7a699a9eb2e.png)
+| week_day    | order_volume | 
+| ----------- | ------------ | 
+| Friday      | 5            |
+| Saturday    | 3            |
+| Sunday      | 1            |
+| Monday      | 5            |
 
-- There are 5 pizzas ordered on Friday and Monday.
+- There are 5 pizzas ordered on both Friday and Monday.
 - There are 3 pizzas ordered on Saturday.
 - There is 1 pizza ordered on Sunday.
 
@@ -431,81 +486,89 @@ GROUP BY FORMAT(DATEADD(DAY, 2, order_time),'dddd');
 
 ````sql
 SELECT 
-  DATEPART(WEEK, registration_date) AS registration_week,
-  COUNT(runner_id) AS runner_signup
-FROM runners
-GROUP BY DATEPART(WEEK, registration_date);
+	WEEK(ADDDATE(registration_date, INTERVAL 2 DAY)) AS registration_week,
+	COUNT(runner_id) AS runner_signup
+FROM pizza_runner.runners
+GROUP BY registration_week;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129739658-a233932a-9f79-4280-a618-8bab6d3bd1f2.png)
+| registration_week | runner_signup | 
+| ----------- | ------------ | 
+| 1           | 2            |
+| 2           | 1            |
+| 3           | 1            |
 
 - On Week 1 of Jan 2021, 2 new runners signed up.
-- On Week 2 and 3 of Jan 2021, 1 new runner signed up.
+- On Weeks 2 and 3 of Jan 2021, 1 new runner signed up.
 
-### 2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
+### 2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pick up the order?
 
 ````sql
-WITH time_taken_cte AS
-(
-  SELECT 
-    c.order_id, 
-    c.order_time, 
-    r.pickup_time, 
-    DATEDIFF(MINUTE, c.order_time, r.pickup_time) AS pickup_minutes
-  FROM #customer_orders AS c
-  JOIN #runner_orders AS r
-    ON c.order_id = r.order_id
-  WHERE r.distance != 0
-  GROUP BY c.order_id, c.order_time, r.pickup_time
-)
-
+WITH time_taken AS (
 SELECT 
-  AVG(pickup_minutes) AS avg_pickup_minutes
-FROM time_taken_cte
-WHERE pickup_minutes > 1;
+	c.order_id,
+    	r.runner_id,
+    	c.order_time,
+    	r.pickup_time,
+    	TIME_TO_SEC(TIMEDIFF(r.pickup_time,c.order_time)) AS pickup_seconds
+FROM pizza_runner.customer_orders_temp c
+JOIN pizza_runner.runner_orders_temp r ON r.order_id = c.order_id 
+				   AND r.distance IS NOT NULL
+GROUP BY c.order_id)
+SELECT
+	runner_id, 
+	ROUND((AVG(pickup_seconds)/60), 2) AS avg_pickup_time_minutes
+FROM time_taken
+GROUP BY runner_id;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129739701-e94b75e9-7193-4cf3-8e77-3c76be8b638d.png)
+| runner_id   | avg_pickup_time_minutes | 
+| ----------- | ------------ | 
+| 1           | 14.33            |
+| 2           | 20.01            |
+| 3           | 10.47            |
 
-- The average time taken in minutes by runners to arrive at Pizza Runner HQ to pick up the order is 15 minutes.
+- The overall average time taken in minutes by runners to arrive at Pizza Runner HQ to pick up the order is 15 minutes. 
 
 ### 3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
 
 ````sql
-WITH prep_time_cte AS
-(
-  SELECT 
-    c.order_id, 
-    COUNT(c.order_id) AS pizza_order, 
-    c.order_time, 
-    r.pickup_time, 
-    DATEDIFF(MINUTE, c.order_time, r.pickup_time) AS prep_time_minutes
-  FROM #customer_orders AS c
-  JOIN #runner_orders AS r
-    ON c.order_id = r.order_id
-  WHERE r.distance != 0
-  GROUP BY c.order_id, c.order_time, r.pickup_time
-)
-
+WITH prep_time_taken AS (
 SELECT 
-  pizza_order, 
-  AVG(prep_time_minutes) AS avg_prep_time_minutes
-FROM prep_time_cte
-WHERE prep_time_minutes > 1
-GROUP BY pizza_order;
+	r.order_id,
+    	COUNT(c.order_id) AS no_of_pizza_ordered,
+    	c.order_time,
+    	r.pickup_time,
+    	TIME_TO_SEC(TIMEDIFF(r.pickup_time,c.order_time)) as prep_time_seconds
+FROM pizza_runner.customer_orders_temp c
+JOIN pizza_runner.runner_orders_temp r ON r.order_id = c.order_id 
+				   AND r.distance IS NOT NULL
+GROUP BY c.order_id)
+SELECT
+	no_of_pizza_ordered,
+    	ROUND((AVG(prep_time_seconds)/60), 2) AS avg_order_prep_time_minutes,
+	ROUND((AVG(prep_time_seconds)/60)/no_of_pizza_ordered, 2) AS avg_time_per_pizza_minutes
+FROM prep_time_taken
+GROUP BY no_of_pizza_ordered;
 ````
 
 **Answer:**
 
-![image](https://user-images.githubusercontent.com/81607668/129739816-05e3ba03-d3fe-4206-8557-869930a897d1.png)
+| no_of_pizza_ordered | avg_order_prep_time_minutes | avg_time_per_pizza_minutes | 
+| ------------------- | --------------------------- | -------------------------- | 
+| 1                   | 12.36                       | 12.36                      |
+| 2                   | 18.38                       | 9.19                       |
+| 3                   | 29.38                       | 9.76                       |
 
 - On average, a single pizza order takes 12 minutes to prepare.
 - An order with 3 pizzas takes 30 minutes at an average of 10 minutes per pizza.
-- It takes 16 minutes to prepare an order with 2 pizzas which is 8 minutes per pizza — making 2 pizzas in a single order the ultimate efficiency rate.
+- It takes 18 minutes to prepare an order with 2 pizzas which is 9 minutes per pizza — making 2 pizzas in a single order the ultimate efficiency rate.
+- Here we can see that as the number of pizzas in an order goes up, so does the total prep time for that order, as you would expect.
+- But then we can also notice that the average preparation time per pizza is higher when you order 1 than when you order multiple.
 
 ### 4. Is there any relationship between the number of pizzas and how long the order takes to prepare?
 
