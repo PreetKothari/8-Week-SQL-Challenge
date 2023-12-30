@@ -1182,7 +1182,7 @@ SELECT
 	ROUND(r.distance/(r.duration/60),2) AS average_speed_kmph,
 	COUNT(c.pizza_id) AS total_no_of_pizzas
 FROM pizza_runner.customer_orders_temp c 
-JOIN pizza_runner.runner_orders_temp r ON r.order_id = c.order_id -- AND r.cancellation IS NULL
+JOIN pizza_runner.runner_orders_temp r ON r.order_id = c.order_id
 JOIN pizza_runner.runner_ratings rr ON rr.order_id = r.order_id
 GROUP BY c.order_id;
 ````
